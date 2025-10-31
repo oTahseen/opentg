@@ -5,43 +5,39 @@ from pyrogram import Client, filters, enums
 from pyrogram.types import Message
 from utils.misc import modules_help, prefix
 
-MUSIC_API_URL = "https://api.betabotz.eu.org/api/tools/whatmusic"
-API_KEY = "sRAVUT6X"
+API_URL = "https://api.deline.web.id/tools/whatmusic?url="
 
 @Client.on_message(filters.command(["shazam"], prefix))
 async def shazam_music(client, message: Message):
-    if not (message.reply_to_message and (message.reply_to_message.audio or message.reply_to_message.voice)):
-        await message.edit("Reply to an audio or voice message to identify the music.")
-        return
+    reply = message.reply_to_message
+    if not (reply and (reply.audio or reply.voice)):
+        return await message.edit("Reply to an audio or voice message to identify the music.")
 
-    media = message.reply_to_message.audio or message.reply_to_message.voice
-    await message.edit("Downloading audio file...")
-    audio_path = await client.download_media(media.file_id)
+    await message.edit("Processing audio...")
+    audio_path = await client.download_media(reply.audio or reply.voice)
 
     try:
-        await message.edit("Uploading audio file...")
-        with open(audio_path, "rb") as audio_file:
-            upload_response = requests.post("https://x0.at", files={"file": audio_file})
-            upload_response.raise_for_status()
-            audio_url = upload_response.text.strip()
-        
-        await message.edit("Analyzing audio file...")
-        url = f"{MUSIC_API_URL}?url={quote(audio_url)}&apikey={API_KEY}"
-        response = requests.get(url)
-        response.raise_for_status()
-        data = response.json()
+        with open(audio_path, "rb") as f:
+            upload = requests.post("https://x0.at", files={"file": f})
+            upload.raise_for_status()
+            audio_url = upload.text.strip()
 
-        if data.get("status"):
-            result = data.get("result", "No details found.")
-            lines = result.split("\n")
-            formatted_result = "\n".join([f"**{line.split(':')[0].strip()}:** {line.split(':', 1)[1].strip()}" for line in lines if ':' in line])
-            await message.edit(f"**Music Information:**\n\n{formatted_result}", parse_mode=enums.ParseMode.MARKDOWN)
+        res = requests.get(f"{API_URL}{quote(audio_url)}").json()
+        if res.get("status") and "result" in res:
+            result = res["result"]
+            title = result.get("title", "Unknown")
+            artist = result.get("artists", "Unknown")
+            await message.edit(
+                f"**Music Identified**\n\n**Title:** {title}\n**Artist:** {artist}",
+                parse_mode=enums.ParseMode.MARKDOWN,
+            )
         else:
-            await message.edit(f"Failed to fetch music information. Error: {data.get('message', 'Unknown error')}")
+            await message.edit("Couldn’t identify the music. Try again with clearer audio.")
     except Exception as e:
-        await message.edit(f"An error occurred: {str(e)}")
+        await message.edit(f"Error: {e}")
     finally:
-        os.remove(audio_path)
+        if os.path.exists(audio_path):
+            os.remove(audio_path)
 
 modules_help["shazam"] = {
     "shazam": "Reply to an audio or voice file to identify the music.",
