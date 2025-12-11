@@ -639,8 +639,9 @@ async def set_custom_role(client: Client, message: Message):
 
 @Client.on_message(filters.command("test", prefix) & filters.me)
 async def test_keys(client: Client, message: Message):
+    file_path = None
     try:
-        await message.edit_text("Testing...")
+        await message.edit_text("Testing Gemini keys...")
 
         gemini_keys = db.get(settings_collection, "gemini_keys") or [gemini_key]
         if not gemini_keys:
@@ -649,6 +650,9 @@ async def test_keys(client: Client, message: Message):
 
         test_prompt = "ping"
         result_lines = []
+        result_lines.append("Gemini API Key Test Results\n")
+        result_lines.append(f"Model: {get_gemini_model()}\n")
+        result_lines.append("-" * 40)
 
         for idx, key in enumerate(gemini_keys):
             try:
@@ -659,18 +663,33 @@ async def test_keys(client: Client, message: Message):
                 )
                 test_model.safety_settings = safety_settings
                 response = test_model.generate_content(test_prompt)
-                text = getattr(response, "text", None) or getattr(response, "result", None)
+                text = getattr(response, "text", None)
                 status = "OK" if text else "No response"
             except Exception as e:
-                status = f"Error: {e.__class__.__name__}: {str(e)[:60]}"
+                status = f"ERROR: {e.__class__.__name__}: {str(e)[:80]}"
 
-            result_lines.append(f"{idx+1}. {key[:8]}...: {status}")
+            result_lines.append(f"{idx + 1}. {key[:10]}... → {status}")
 
-        result_text = "Gemini API Key Test Results:\n" + "\n".join(result_lines)
-        await message.edit_text(result_text)
+        result_text = "\n".join(result_lines)
+
+        file_path = "gemini_test_results.txt"
+        with open(file_path, "w", encoding="utf-8") as f:
+            f.write(result_text)
+
+        await client.send_document(
+            chat_id=message.chat.id,
+            document=file_path,
+            caption="✅ Gemini API key test results"
+        )
+
+        await message.delete()
 
     except Exception as e:
         await client.send_message("me", f"test command error:\n\n{str(e)}")
+
+    finally:
+        if file_path and os.path.exists(file_path):
+            os.remove(file_path)
 
 modules_help["gchat"] = {
     "gchat on/off/del/all/r [user_id]": "Manage gchat for users.",
