@@ -22,7 +22,7 @@ def google_translate(query, source_lang="auto", target_lang="en"):
     else:
         raise Exception("Failed to fetch translation.")
 
-@Client.on_message(filters.command(["gtr"], prefix))
+@Client.on_message(filters.command(["tr"], prefix))
 async def translate_text(client, message: Message):
     args = message.text.split(maxsplit=2)
     if len(args) < 2 and not (message.reply_to_message and message.reply_to_message.text):
@@ -49,6 +49,6 @@ async def translate_text(client, message: Message):
     except Exception as e:
         await processing_message.edit(f"Failed to translate the text: {str(e)}")
 
-modules_help["gtranslate"] = {
-    "gtr [language] [text]": "Translate the provided text to the specified language."
+modules_help["translate"] = {
+    "tr [language] [text]": "Translate the provided text to the specified language."
 }
