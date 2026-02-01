@@ -94,6 +94,7 @@ async def rename_topic(client: Client, message: Message):
     & filters.incoming
     & filters.private
     & filters.media
+    & ~filters.sticker
     & ~filters.me
     & ~filters.bot
 )
