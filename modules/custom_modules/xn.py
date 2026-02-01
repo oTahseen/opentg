@@ -4,7 +4,7 @@ from pyrogram.types import Message
 from io import BytesIO
 from utils.misc import modules_help, prefix
 
-BASE_URL = "https://delirius-apiofc.vercel.app"
+BASE_URL = "https://api.delirius.store"
 SEARCH_ENDPOINT = "/search/xnxxsearch?query="
 DOWNLOAD_ENDPOINT = "/download/xnxxdl?url="
 
