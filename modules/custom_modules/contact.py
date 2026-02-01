@@ -2,6 +2,61 @@ import asyncio
 from pyrogram import Client, filters
 from pyrogram.types import Message
 from utils.misc import modules_help, prefix
+from modules.custom_modules.dm import media_slot
+
+@Client.on_message(filters.command(["addx", "x"], prefix) & filters.me)
+async def addx_contact(c: Client, message: Message):
+    try:
+        user = message.reply_to_message.from_user if message.reply_to_message else await c.get_users(message.chat.id)
+
+        if user.is_bot:
+            return await message.edit("You can't add bots to contacts.")
+
+        args = message.text.split(maxsplit=1)[1:] if len(message.command) > 1 else []
+        if not args and message.reply_to_message and message.reply_to_message.text:
+            args = [message.reply_to_message.text.strip()]
+
+        first_name = args[0] if args else (user.first_name or "Unknown")
+        last_name = args[1] if len(args) > 1 else ""
+
+        await c.add_contact(
+            user_id=user.id,
+            first_name=first_name,
+            last_name=last_name,
+            phone_number="",
+            share_phone_number=False
+        )
+
+        user = await c.get_users(user.id)
+        full_name = f"{first_name} {last_name}".strip()
+
+        if user.is_mutual_contact:
+            await message.edit(
+                f"<b>Contact added:</b> <a href='tg://user?id={user.id}'>{full_name}</a> (Mutual)"
+            )
+
+            if message.reply_to_message or args:
+                await c.send_message(message.chat.id, "you've beautiful name")
+                await asyncio.sleep(1)
+                await c.send_message(message.chat.id, "can I see you right now? I mean your face.")
+            else:
+                await asyncio.sleep(1)
+                await c.send_message(message.chat.id, "What's your name in English?")
+        else:
+            await c.delete_contacts(user_ids=user.id)
+            await message.edit(
+                f"<b>Contact removed (not mutual):</b> <a href='tg://user?id={user.id}'>{full_name}</a>"
+            )
+            await asyncio.sleep(1)
+            await c.send_message(message.chat.id, "You didn't add me yet")
+            message.text = f"{prefix}s9"
+            await media_slot(c, message)
+
+    except Exception as e:
+        await message.edit(f"Failed to add contact: <code>{e}</code>")
+
+    await asyncio.sleep(1)
+    await message.delete()
 
 @Client.on_message(filters.command(["add", "c"], prefix) & filters.me)
 async def add_contact(c: Client, message: Message):
