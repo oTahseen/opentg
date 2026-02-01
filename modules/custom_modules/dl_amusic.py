@@ -33,7 +33,7 @@ async def apple_music(client: Client, message: Message):
 
     try:
         search_result = requests.get(
-            f"https://delirius-apiofc.vercel.app/search/applemusicv2?query={query}"
+            f"https://api.delirius.store/search/applemusicv2?query={query}"
         ).json()
         if not (search_result.get("status") and search_result.get("data")):
             raise ValueError("No results found")
@@ -55,7 +55,7 @@ async def apple_music(client: Client, message: Message):
 
     try:
         download_result = requests.get(
-            f"https://delirius-apiofc.vercel.app/download/applemusicdl?url={song_url}"
+            f"https://api.delirius.store/download/applemusicdl?url={song_url}"
         ).json()
         if not download_result.get("status"):
             raise ValueError("Failed to fetch download link")
