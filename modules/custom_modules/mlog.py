@@ -51,9 +51,12 @@ async def rename_topic(client: Client, message: Message):
         user_id = int(message.command[1]) if len(message.command) > 1 else message.chat.id
         chat_id = db.get("custom.mlog", "chat")
         if not chat_id:
-            status_msg = await message.edit(f"<b>No Chat ID is set. Use {prefix}msetchat to set the Chat ID.</b>")
+            status_msg = await message.edit(
+                f"<b>No Chat ID is set. Use {prefix}msetchat to set the Chat ID.</b>"
+            )
             await sleep(1)
             return await status_msg.delete()
+
         group_data = get_group_data(chat_id)
         user_topics = group_data.get("user_topics", {})
         topic_id = user_topics.get(str(user_id))
@@ -61,29 +64,60 @@ async def rename_topic(client: Client, message: Message):
             status_msg = await message.edit(f"<b>No topic found for user ID {user_id}.</b>")
             await sleep(1)
             return await status_msg.delete()
-        user = await client.get_users(user_id)
+
         try:
-            await client.edit_forum_topic(chat_id=chat_id, topic_id=topic_id, title=user.first_name)
-            status_msg = await message.edit(f"<b>Topic renamed to '{user.first_name}'.</b>")
+            user = await client.get_users(user_id)
+        except Exception as e:
+            if "PEER_ID_INVALID" in str(e):
+                await client.send_message(
+                    chat_id=chat_id,
+                    message_thread_id=topic_id,
+                    text="This is topic for deleted account"
+                )
+                status_msg = await message.edit(
+                    "<b>Account Deleted, Topic Found.</b>"
+                )
+                await sleep(1)
+                return await status_msg.delete()
+            raise
+
+        try:
+            await client.edit_forum_topic(
+                chat_id=chat_id,
+                topic_id=topic_id,
+                title=user.first_name
+            )
+            status_msg = await message.edit(
+                f"<b>Topic renamed to '{user.first_name}'.</b>"
+            )
         except Exception as e:
             if "TOPIC_NOT_MODIFIED" in str(e):
-                status_msg = await message.edit(f"<b>Topic name is already '{user.first_name}'.</b>")
+                status_msg = await message.edit(
+                    f"<b>Topic name is already '{user.first_name}'.</b>"
+                )
             else:
                 raise e
+
         info_message = (
             f"<b>Chat Name:</b> {user.full_name}\n"
             f"<b>User ID:</b> {user.id}\n"
             f"<b>Username:</b> @{user.username or 'N/A'}\n"
             f"<b>Phone No:</b> +{user.phone_number or 'N/A'}"
         )
-        info_msg = await client.send_message(chat_id=chat_id, message_thread_id=topic_id, text=info_message)
+        info_msg = await client.send_message(
+            chat_id=chat_id,
+            message_thread_id=topic_id,
+            text=info_message
+        )
         await info_msg.pin()
         await sleep(1)
         await status_msg.delete()
+
     except ValueError:
         status_msg = await message.edit("<b>Invalid user ID</b>")
         await sleep(1)
         return await status_msg.delete()
+
     except Exception as e:
         status_msg = await message.edit(f"<b>Error:</b> {str(e)}")
         await sleep(1)
@@ -102,7 +136,9 @@ async def media_log(client: Client, message: Message):
     user_id = message.from_user.id
     user_media_cache[user_id].append(message)
     if user_id not in media_processing_tasks:
-        media_processing_tasks[user_id] = asyncio.create_task(process_media(client, message.from_user))
+        media_processing_tasks[user_id] = asyncio.create_task(
+            process_media(client, message.from_user)
+        )
 
 async def process_media(client: Client, user):
     await asyncio.sleep(5)
